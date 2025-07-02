@@ -1,27 +1,16 @@
-# Kasket
+# Project Name
 
-Welcome to Kasket! Here is where you will
-install Kasket through the kasket_setup.bat
-file. Once you have installed Kasket, read
-the features list.
+A brief description of your project.
 
 ## Features
 
-- Create .kasket files using create_kasket.bat
-- Configure .kasket files
-- Run .kasket files
+- List key features
+- Modern technology stack
+- Easy to use interface
+- Customizable configuration
 
-## What you need to do before use
+## Installation
 
-**MAKE SURE YOU HAVE PYTHON INSTALLED**
-- Python is needed to run Kasket, otherwise it
-will not work.
-- After installation of Kasket, run .kasket files with the Kasket app. (kasket.bat)
-- You are now finished!
-
-## What you will see
-
-- You will see a **test.kasket** file.
-- Run .kasket files with the Kasket app set to **ALWAYS**.
-
-**Thank you for using Kasket!**
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/projectname.git

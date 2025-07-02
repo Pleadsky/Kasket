@@ -62,6 +62,26 @@ class KasketInterpreter:
         else:
             raise SyntaxError("Invalid PRINT statement")
 
+    def _handle_input(self, line):
+        """Handle INPUT command with validation and sanitization"""
+        match = re.match(r'INPUT "(.*)" -> (\w+)', line)
+        if not match:
+            raise SyntaxError("Invalid INPUT format. Use: INPUT \"prompt\" -> variable")
+        
+        prompt, var_name = match.groups()
+        
+        # Print prompt with current color and get input
+        print(f"{self.current_color}{prompt}: {colorama.Style.RESET_ALL}", end='')
+        user_input = input().strip()
+        
+        # Basic input validation
+        if len(user_input) > 1000:
+            raise ValueError("Input exceeds maximum length of 1000 characters")
+        if re.search(r'[^\w\s-]', user_input):
+            user_input = re.sub(r'[^\w\s-]', '', user_input)
+        
+        self.variables[var_name] = user_input
+
     def _handle_color(self, line):
         match = re.match(r'COLOR (\d+)', line)
         if match:
