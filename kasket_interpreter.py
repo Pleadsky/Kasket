@@ -29,12 +29,24 @@ class KasketInterpreter:
 
     def execute(self, script):
         try:
-            lines = [line.strip() for line in script.split('\n') if line.strip()]
-            # Validate END command
-            if not lines or lines[-1] != "END":
-                raise SyntaxError("Missing required END command at script conclusion")
+            # Skip lines until first command or title
+            lines = []
+            found_start = False
+            for line in script.split('\n'):
+                stripped = line.strip()
+                if not found_start:
+                    if stripped and (stripped.startswith(('PRINT', 'INPUT', 'COLOR', 'DELAY')) or "Kasket Script" in line):
+                        found_start = True
+                        lines.append(stripped)
+                else:
+                    lines.append(stripped)
             
-            for line_num, line in enumerate(lines[:-1], 1):  # Skip last line (END)
+            # Validate remaining lines
+            if not lines or lines[-1] != "END":
+                raise SyntaxError("Missing required END command")
+            
+            # Process commands (excluding END)
+            for line_num, line in enumerate(lines[:-1], 1):
                 if line.startswith('PRINT'):
                     self._handle_print(line)
                 elif line.startswith('INPUT'):
@@ -44,7 +56,7 @@ class KasketInterpreter:
                 elif line.startswith('DELAY'):
                     self._handle_delay(line)
                 else:
-                    raise SyntaxError(f"Line {line_num}: Unknown command '{line.split()[0]}'")
+                    raise SyntaxError(f"Line {line_num}: Unknown command")
         except Exception as e:
             print(f"\nERROR: {str(e)}")
             print(f"Traceback:\n{''.join(traceback.format_exc())}")
@@ -56,31 +68,22 @@ class KasketInterpreter:
         if match:
             # Replace color codes and variables
             content = match.group(1)
-            content = re.sub(r'\{COLOR:(\d+)\}', lambda m: str(self.color_map[int(m.group(1))]), content)
+            content = re.sub(r'\{COLOR:(\d+)\}', lambda m: self.color_map.get(int(m.group(1)), ''), content)
             content = re.sub(r'&(\w+)', lambda m: str(self.variables.get(m.group(1), "")), content)
-            print(f"{content}{colorama.Style.RESET_ALL}")
+            print(f"{self.current_color}{content}{colorama.Style.RESET_ALL}")
         else:
             raise SyntaxError("Invalid PRINT statement")
 
     def _handle_input(self, line):
-        """Handle INPUT command with validation and sanitization"""
-        match = re.match(r'INPUT "(.*)" -> (\w+)', line)
-        if not match:
-            raise SyntaxError("Invalid INPUT format. Use: INPUT \"prompt\" -> variable")
-        
-        prompt, var_name = match.groups()
-        
-        # Print prompt with current color and get input
-        print(f"{self.current_color}{prompt}: {colorama.Style.RESET_ALL}", end='')
-        user_input = input().strip()
-        
-        # Basic input validation
-        if len(user_input) > 1000:
-            raise ValueError("Input exceeds maximum length of 1000 characters")
-        if re.search(r'[^\w\s-]', user_input):
-            user_input = re.sub(r'[^\w\s-]', '', user_input)
-        
-        self.variables[var_name] = user_input
+        # Fix regex pattern to match original syntax
+        match = re.match(r'INPUT "(.*)" TO &(\w+)', line)
+        if match:
+            prompt, var_name = match.groups()
+            # Add current color to prompt display
+            print(f"{self.current_color}{prompt} {colorama.Style.RESET_ALL}", end='')
+            self.variables[var_name] = input().strip()
+        else:
+            raise SyntaxError("Invalid INPUT statement")
 
     def _handle_color(self, line):
         match = re.match(r'COLOR (\d+)', line)
@@ -119,19 +122,24 @@ class SecurityError(Exception):
     pass
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage Error: Missing script file")
-        print("Correct usage: kasket.bat your_script.kasket")
+    if len(sys.argv) == 1:
+        print("┌──────────────────────────────────┐")
+        print("│    Kasket Script Interpreter     │")
+        print("└──────────────────────────────────┘")
+        script_path = input("Drag script file here or enter path: ").strip('" ')
+    elif len(sys.argv) == 2:
+        script_path = os.path.abspath(sys.argv[1])
+    else:
+        print("Usage Error: Too many arguments")
+        print("Correct usage: kasket.bat [your_script.kasket]")
         input("Press Enter to exit...")
         sys.exit(1)
-    
+
     try:
-        script_path = os.path.abspath(sys.argv[1])
         if not os.path.exists(script_path):
-            print(f"File Not Found Error: No such file '{sys.argv[1]}'")
-            print("1. Check the file exists in the current directory")
-            print("2. Verify the file extension is .kasket")
-            input("Press Enter to exit...")
+            print(f"File Not Found: {script_path}")
+            print("1. Check path spelling")
+            print("2. Ensure file has .kasket extension")
             sys.exit(1)
             
         with open(script_path, 'r') as f:
@@ -139,7 +147,8 @@ if __name__ == "__main__":
         
         interpreter = KasketInterpreter()
         interpreter.execute(script)
+        
     except Exception as e:
-        print(f"\nFatal Error: {str(e)}")
+        print(f"Execution Failed: {str(e)}")
         input("Press Enter to exit...")
         sys.exit(1)
